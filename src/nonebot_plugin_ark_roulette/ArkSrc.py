@@ -13,7 +13,7 @@ URLS = {
 }
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
 
-def fetch_and_save_data(DATA_DIR, URLS):
+def fetch_and_save_data(DATA_DIR):
     # 确保 data 目录存在
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)

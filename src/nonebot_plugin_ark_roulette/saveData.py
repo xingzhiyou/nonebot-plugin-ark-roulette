@@ -61,15 +61,6 @@ def load_handbook_data(data_path):
 
 
 
-def load_skin_data(data_path):
-    """
-    提取皮肤数据。
-    """
-    skin_data = load_skin_data(data_path)
-
-    return skin_data
-
-
 def merge_data(character_data, handbook_data, skin_data):
     """
     合并角色数据、角色档案和皮肤数据。

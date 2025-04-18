@@ -6,7 +6,7 @@ from .mapping import (
     PROFESSION_MAPPING,
     POSITION_MAPPING
 )
-
+    
 
 # 定义数据目录和文件路径
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")

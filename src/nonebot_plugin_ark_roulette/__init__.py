@@ -54,7 +54,8 @@ async def handle_update_data(bot: Bot, event: MessageEvent):
     except FinishedException:
         pass
     except Exception as e:
-        logger.error(f"更新数据时发生错误：{e}")
+        logger.exception(e)
+        # logger.error(f"更新数据时发生错误：{e}")
         await update_data.send("更新数据失败，请检查日志。")
 
 
