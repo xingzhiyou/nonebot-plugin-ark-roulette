@@ -34,6 +34,7 @@ def load_character_data(data_path):
             "itemObtainApproach": char_info.get("itemObtainApproach"),
             "rarity": char_info.get("rarity"),
             "subProfessionId": char_info.get("subProfessionId"),
+            "position": char_info.get("position"),
         }
 
     return formatted_data

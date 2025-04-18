@@ -85,6 +85,28 @@ BASIC_ARCHIVES = {
     "oripathy_status": "矿石病感染情况",
 }
 
+
+RARITY_MAPPING = {
+    "1": "TIER_1",
+    "2": "TIER_2",
+    "3": "TIER_3",
+    "4": "TIER_4",
+    "5": "TIER_5",
+    "6": "TIER_6",
+    "1星": "TIER_1",
+    "2星": "TIER_2",
+    "3星": "TIER_3",
+    "4星": "TIER_4",
+    "5星": "TIER_5",
+    "6星": "TIER_6",
+    "一星": "TIER_1",
+    "二星": "TIER_2",
+    "三星": "TIER_3",
+    "四星": "TIER_4",
+    "五星": "TIER_5",
+    "六星": "TIER_6",
+}
+
 def load_sub_profession_mapping(uniequip_table_path):
     """
     加载子职业数据建立双向映射表。
