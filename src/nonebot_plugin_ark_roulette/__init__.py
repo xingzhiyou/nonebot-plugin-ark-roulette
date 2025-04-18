@@ -8,14 +8,9 @@ from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
 from nonebot.permission import SUPERUSER
 from nonebot.params import CommandArg
 
-from .fetch_data import fetch_and_save_data, find_matching_characters, get_drawer_list_from_skin_table
-from .mapping import (
-    load_mappings,
-    FIELD_MAPPING,
-    PROFESSION_MAPPING,
-    POSITION_MAPPING
-)
-from .utils import map_value
+from .ArkSrc import fetch_and_save_data
+from .mapping import FIELD_MAPPING
+from .saveData import load_character_data, load_handbook_data, load_skin_data, merge_data, save_to_json
 
 __plugin_meta__ = PluginMetadata(
     name="明日方舟干员插件",
@@ -32,6 +27,7 @@ character_table_path = os.path.join(DATA_DIR, "character_table.json")
 uniequip_table_path = os.path.join(DATA_DIR, "uniequip_table.json")
 handbook_team_table_path = os.path.join(DATA_DIR, "handbook_team_table.json")
 nation_table_path = os.path.join(DATA_DIR, "nation_table.json")
+handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
 
 
 
@@ -48,6 +44,12 @@ async def handle_update_data(bot: Bot, event: MessageEvent):
     try:
         await update_data.send("正在更新干员数据，请稍等...")
         fetch_and_save_data(DATA_DIR)
+        # 加载数据文件
+        character_data = load_character_data(character_table_path)
+        handbook_data = load_handbook_data(handbook_info_table_path)
+        skin_data = load_skin_data(skin_table_path)
+        merged_data = merge_data(character_data, handbook_data, skin_data)
+        save_to_json(merged_data, os.path.join(DATA_DIR, "merged_character_data.json"))
         await update_data.send("干员数据更新完成！")
     except FinishedException:
         pass
