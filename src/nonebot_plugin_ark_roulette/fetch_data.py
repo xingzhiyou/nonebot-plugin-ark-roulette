@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+from .utils import map_value
 
 # 定义目标 URL 和保存路径
 URLS = {
@@ -8,6 +9,7 @@ URLS = {
     "handbook_team_table": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/refs/heads/master/zh_CN/gamedata/excel/handbook_team_table.json",
     "uniequip_table": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/refs/heads/master/zh_CN/gamedata/excel/uniequip_table.json",
     "skin_table": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/refs/heads/master/zh_CN/gamedata/excel/skin_table.json",
+    "handbook_info_table": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/refs/heads/master/zh_CN/gamedata/excel/handbook_info_table.json",
 }
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
 
@@ -62,7 +64,7 @@ def get_drawer_list_from_skin_table(skin_table_path, drawer_list=None):
 
 def find_matching_characters(character_table_path, search_criteria, drawer_list=None):
     """
-    从 character_table.json 文件中寻找符合条件的角色。
+    从 character_table.json 文件中寻找符合条件的角色，支持关键词匹配。
     """
     with open(character_table_path, "r", encoding="utf-8") as f:
         character_data = json.load(f)
@@ -77,7 +79,13 @@ def find_matching_characters(character_table_path, search_criteria, drawer_list=
         match = True
         for field, value in search_criteria.items():
             if field in char_info:
-                if char_info[field] != value:
+                char_value = map_value(field, char_info.get(field, ""), is_input=False)  # 映射字段值
+                if isinstance(char_value, str) and isinstance(value, str):
+                    # 支持部分匹配和忽略大小写
+                    if value.lower() not in char_value.lower():
+                        match = False
+                        break
+                elif char_value != value:
                     match = False
                     break
             else:
@@ -89,6 +97,8 @@ def find_matching_characters(character_table_path, search_criteria, drawer_list=
             matching_characters.append(char_info)
     
     return matching_characters
+
+
 
 # 示例用法
 if __name__ == "__main__":
@@ -110,4 +120,4 @@ if __name__ == "__main__":
     for character in matc:
         print(character)
 
-    
+
