@@ -1,12 +1,7 @@
 import json
 import os
 
-from .mapping import (
-    load_mappings,
-    PROFESSION_MAPPING,
-    POSITION_MAPPING,
-    RARITY_MAPPING
-)
+from .mapping import load_mappings
     
 
 # 定义数据目录和文件路径
@@ -16,21 +11,19 @@ handbook_team_table_path = os.path.join(DATA_DIR, "handbook_team_table.json")
 merged_character_data_path = os.path.join(DATA_DIR, "merged_character_data.json")
 
 # 加载映射表
-SUB_PROFESSION_MAPPING, TEAM_NATION_MAPPING = load_mappings(uniequip_table_path, handbook_team_table_path)
+mappings = load_mappings(uniequip_table_path, handbook_team_table_path)
 
 def map_tables(value):
     """
     根据键查询映射表并返回对应的值，支持关键词匹配。
     """
-    # 将四个表的映射表合并
-    combined_mapping = {**PROFESSION_MAPPING, **POSITION_MAPPING, **SUB_PROFESSION_MAPPING, **TEAM_NATION_MAPPING, **RARITY_MAPPING}
-    
+
     # 精确匹配
-    if value in combined_mapping:
-        return combined_mapping[value]
+    if value in mappings:
+        return mappings[value]
     
     # 关键词匹配
-    for key, mapped_value in combined_mapping.items():
+    for key, mapped_value in mappings.items():
         if key in value or value in key:
             return mapped_value
     

@@ -4,13 +4,17 @@ import os
 from .handbook import load_handbook, retrieve_info
 from .skin import load_skin_data
 
-from .mapping import BASIC_ARCHIVES
+from .mapping import load_mappings
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
 character_table_path = os.path.join(DATA_DIR, "character_table.json")
 handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
 skin_table_path = os.path.join(DATA_DIR, "skin_table.json")
 
+mappings = load_mappings(
+    os.path.join(DATA_DIR, "uniequip_table.json"),
+    os.path.join(DATA_DIR, "handbook_team_table.json"),
+)
 
 def load_character_data(data_path):
     """
@@ -46,7 +50,7 @@ def load_handbook_data(data_path):
     并根据指定的关键字提取信息。
     """
     handbook_stories = load_handbook(data_path)
-    formatted_data = {key: {} for key in BASIC_ARCHIVES}
+    formatted_data = {key: {} for key in mappings}
 
     # 遍历每个角色的故事数据
     for char_id, stories in handbook_stories.items():
@@ -55,7 +59,7 @@ def load_handbook_data(data_path):
             info = retrieve_info(handbook_stories, char_id, "基础档案", key)
             if info:
                 # 使用映射表映射关键词
-                mapped_key = BASIC_ARCHIVES.get(key, key)  # 使用映射表映射关键词
+                mapped_key = mappings.get(key, key)  # 使用映射表映射关键词
                 formatted_data[mapped_key][char_id] = info
 
     return formatted_data

@@ -23,7 +23,9 @@ FIELD_MAPPING = {
     "profession": "职业",
     "职业": "profession",
     "subProfessionId": "子职业",
-    "子职业": "subProfessionId"
+    "子职业": "subProfessionId",
+    "itemObtainApproach": "获取方式",
+    "获取方式": "itemObtainApproach",
 }
 
 PROFESSION_MAPPING = {
@@ -144,12 +146,22 @@ def load_handbook_team_table(handbook_team_table_path):
 
     return mapping
 
-
 def load_mappings(uniequip_table_path, handbook_team_table_path):
     """
-    加载所有映射表。
+    加载所有映射表并合并为一个大表。
     """
-    sub_profession_mapping = load_sub_profession_mapping(uniequip_table_path)
-    team_nation_mapping = load_handbook_team_table(handbook_team_table_path)
-    return sub_profession_mapping, team_nation_mapping
+    sub_profession_mapping = load_sub_profession_mapping(uniequip_table_path) or {}
+    team_nation_mapping = load_handbook_team_table(handbook_team_table_path) or {}
 
+    # 合并所有映射表
+    combined_mapping = {
+        **FIELD_MAPPING,
+        **PROFESSION_MAPPING,
+        **POSITION_MAPPING,
+        **RARITY_MAPPING,
+        **BASIC_ARCHIVES,
+        **sub_profession_mapping,
+        **team_nation_mapping,
+    }
+
+    return combined_mapping

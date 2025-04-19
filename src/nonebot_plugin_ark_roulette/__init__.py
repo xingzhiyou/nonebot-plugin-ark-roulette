@@ -10,7 +10,7 @@ from nonebot.permission import SUPERUSER
 from nonebot.params import CommandArg
 
 from .ArkSrc import fetch_and_save_data
-from .mapping import FIELD_MAPPING
+from .mapping import FIELD_MAPPING, load_mappings
 from .saveData import load_character_data, load_handbook_data, load_skin_data, merge_data, save_to_json
 from .utils import map_tables, search_raw_data
 
@@ -32,20 +32,45 @@ nation_table_path = os.path.join(DATA_DIR, "nation_table.json")
 handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
 merged_character_data_path = os.path.join(DATA_DIR, "merged_character_data.json")
 
-
+# 加载映射表和数据文件
+mappings = load_mappings(uniequip_table_path, handbook_team_table_path)
 
 find_operator = on_command("筛选", aliases={"筛选干员"}, priority=5, block=True)
-random_operator = on_command("随机选择", aliases={"随机干员"}, priority=5, block=True)
+random_operator = on_command("随机选择", aliases={"随机干员", "roll"}, priority=5, block=True)
 update_data = on_command("更新数据", aliases={"更新干员数据"}, priority=5, block=True, permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER)
 
 # 添加全局变量用于存储会话数据
 find_operator_sessions = {}
 
 # 定义超时时间（秒）
-SESSION_TIMEOUT = 60
+SESSION_TIMEOUT = 120
 
 # 添加一个全局字典用于存储用户的超时任务
 session_timeout_tasks = {}
+
+
+
+# 定义一个函数来启动或重置超时任务
+def reset_session_timeout(user_id: str):
+    """
+    重置用户的超时任务。
+    """
+    # 如果用户已有超时任务，取消旧任务
+    if user_id in session_timeout_tasks:
+        session_timeout_tasks[user_id].cancel()
+    # 定义超时任务
+    async def session_timeout():
+        try:
+            await asyncio.sleep(SESSION_TIMEOUT)
+            logger.info(f"用户 {user_id} 的筛选会话超时，自动退出筛选模式。")
+            find_operator_sessions.pop(f"find_operator_{user_id}", None)
+            find_operator_sessions.pop(f"find_operator_history_{user_id}", None)
+            session_timeout_tasks.pop(user_id, None)
+            await find_operator.finish("由于长时间未操作，已自动退出筛选模式。")
+        except FinishedException:
+            pass
+    # 启动新的超时任务
+    session_timeout_tasks[user_id] = asyncio.create_task(session_timeout())
 
 @update_data.handle()
 async def handle_update_data(bot: Bot, event: MessageEvent):
@@ -79,22 +104,6 @@ async def handle_find_operator(event: MessageEvent, args: Message = CommandArg()
     session_key = f"find_operator_{user_id}"
     history_key = f"find_operator_history_{user_id}"
 
-    # 定义一个函数来处理超时
-    async def session_timeout():
-        await asyncio.sleep(SESSION_TIMEOUT)
-        logger.info(f"用户 {user_id} 的筛选会话超时，自动退出筛选模式。")
-        find_operator_sessions.pop(session_key, None)
-        find_operator_sessions.pop(history_key, None)
-        session_timeout_tasks.pop(user_id, None)
-        await find_operator.finish("由于长时间未操作，已自动退出筛选模式。")
-
-    # 如果用户已有超时任务，取消旧任务
-    if user_id in session_timeout_tasks:
-        session_timeout_tasks[user_id].cancel()
-
-    # 启动新的超时任务
-    session_timeout_tasks[user_id] = asyncio.create_task(session_timeout())
-
     logger.info(f"用户 {user_id} 开始筛选操作，输入参数: {args.extract_plain_text().strip()}")
 
     # 初始化或获取用户的当前数据和历史记录
@@ -118,23 +127,27 @@ async def handle_find_operator(event: MessageEvent, args: Message = CommandArg()
             "2. 输入 'r' 重置筛选结果。\n"
             "3. 输入 'd' 撤销上一个关键词筛选。\n"
             "4. 输入 'q' 退出筛选模式。\n"
-            "如果 60 秒内没有操作，系统将自动退出筛选模式。"
+            "如果 120 秒内没有操作，系统将自动退出筛选模式。"
         )
         await find_operator.finish(usage_message)
 
+    # 在每个用户交互的逻辑分支中调用 reset_session_timeout
     if keywords.lower() == 'q':
+        reset_session_timeout(user_id)  # 重置计时器
         logger.info(f"用户 {user_id} 退出筛选模式。")
         find_operator_sessions.pop(session_key, None)
         find_operator_sessions.pop(history_key, None)
         session_timeout_tasks.pop(user_id, None).cancel()  # 取消超时任务
         await find_operator.finish("已退出筛选模式。")
     elif keywords.lower() == 'r':
+        reset_session_timeout(user_id)  # 重置计时器
         logger.info(f"用户 {user_id} 重置筛选结果。")
         with open(merged_character_data_path, "r", encoding="utf-8") as f:
             find_operator_sessions[session_key] = json.load(f)
         find_operator_sessions[history_key] = []  # 重置历史记录
         await find_operator.finish("搜索结果已重置为完整数据集。")
     elif keywords.lower() == 'd':
+        reset_session_timeout(user_id)  # 重置计时器
         if find_operator_sessions[history_key]:
             logger.info(f"用户 {user_id} 撤销上一个关键词筛选。")
             # 回退到上一个状态
@@ -144,10 +157,14 @@ async def handle_find_operator(event: MessageEvent, args: Message = CommandArg()
             logger.warning(f"用户 {user_id} 尝试撤销筛选，但没有历史记录。")
             await find_operator.finish("没有可以撤销的筛选操作。")
 
-    # 拆分多个关键词并依次筛选
+    # 在关键词处理逻辑中也调用 reset_session_timeout
     keyword_list = keywords.split()
+    reset_session_timeout(user_id)  # 重置计时器
     logger.info(f"用户 {user_id} 输入的关键词列表: {keyword_list}")
     find_operator_sessions[history_key].append(current_data.copy())  # 保存当前数据到历史记录
+
+    # 重新启动计时器
+    reset_session_timeout(user_id)
 
     for keyword in keyword_list:
         # 使用映射表转换关键词
@@ -170,3 +187,52 @@ async def handle_find_operator(event: MessageEvent, args: Message = CommandArg()
     result_text = f"找到 {len(current_data)} 个包含关键词 '{' '.join(keyword_list)}' 的条目：\n" + "，".join(names)
     logger.info(f"用户 {user_id} 的筛选结果: {result_text.strip()}")
     await find_operator.finish(result_text.strip())
+
+
+@ random_operator.handle()
+async def handle_random_operator(event: MessageEvent, args: Message = CommandArg()):
+    """
+    处理随机选择干员命令。
+    """
+    user_id = event.get_user_id()
+    # 输出筛选后的表
+    session_key = f"find_operator_{user_id}"
+    history_key = f"find_operator_history_{user_id}"
+    current_data = find_operator_sessions.get(session_key, None)
+
+    if current_data is None:
+        logger.warning(f"用户 {user_id} 尝试随机选择，但没有筛选结果。")
+        usage_message = (
+            "【随机选择干员命令说明】\n"
+            "使用方法：\n"
+            "/随机选择 <数量>\n"
+            "功能说明：\n"
+            "1. 在筛选结果中随机选择指定数量的干员。\n"
+            "2. 如果未指定数量，默认选择 1 个干员。\n"
+            "注意：请先使用 /筛选 命令进行筛选后再使用此命令。"
+        )
+        await random_operator.finish(usage_message)
+        # 重置超时任务
+        reset_session_timeout(user_id)
+
+
+    # 随机选择指定数量的干员，默认一个
+    import random
+    user_id = event.get_user_id()
+    reset_session_timeout(user_id)  # 重置计时器
+
+    num_to_select = 1
+    if args.extract_plain_text().strip():
+        try:
+            num_to_select = int(args.extract_plain_text().strip())
+        except ValueError:
+            await random_operator.finish("请输入一个有效的数字。")
+    
+    if num_to_select < 1:
+        await random_operator.finish("请至少选择一个干员。")
+    if num_to_select > len(current_data):
+        await random_operator.finish(f"筛选结果中只有 {len(current_data)} 个干员，无法选择 {num_to_select} 个。")
+    
+    selected_operators = random.sample(list(current_data.values()), num_to_select)
+    selected_names = [operator.get('name', 'N/A') for operator in selected_operators]
+    await random_operator.finish(f"随机选择的干员：{', '.join(selected_names)}")
