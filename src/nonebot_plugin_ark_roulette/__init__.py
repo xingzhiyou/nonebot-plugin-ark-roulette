@@ -20,6 +20,8 @@ __plugin_meta__ = PluginMetadata(
     usage="使用 /筛选 或 /随机选择 命令来获取干员信息。",
     type="application",
     homepage="https://github.com/xingzhiyou/nonebot-plugin-ark-roulette",
+    config=None,  # 插件配置类
+    supported_adapters={"~onebot.v11"},  # 支持的适配器
 )
 
 # 定义数据目录和文件路径
