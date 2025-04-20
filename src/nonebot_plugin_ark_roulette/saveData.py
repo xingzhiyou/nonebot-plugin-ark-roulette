@@ -2,14 +2,16 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 
+from nonebot import get_plugin_config
+
 from .handbook import load_handbook, retrieve_info
 from .skin import load_skin_data
 from .mapping import load_team_sub_mapping
 from .config import Config
 
-confi = Config()  # 实例化配置类
+conf = get_plugin_config(Config)
 
-DATA_DIR = confi.data_dir  # 从配置中获取数据目录
+DATA_DIR = conf.data_dir  # 从配置中获取数据目录
 character_table_path = os.path.join(DATA_DIR, "character_table.json")
 handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
 skin_table_path = os.path.join(DATA_DIR, "skin_table.json")

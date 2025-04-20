@@ -1,10 +1,12 @@
 import os
+from nonebot import get_plugin_config
 import requests
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .config import Config
 
-confi = Config()  # 实例化配置类
+conf = get_plugin_config(Config)
+
 
 # 定义目标 URL 和保存路径
 URLS = {
@@ -24,10 +26,10 @@ MIRROR_URLS = {
     "handbook_info_table": "https://ghfast.top/https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/refs/heads/master/zh_CN/gamedata/excel/handbook_info_table.json",
 }
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
+DATA_DIR = conf.data_dir  # 从配置中获取数据目录
 
 # 定义代理
-PROXIES = confi.proxy  # 从配置中获取代理设置
+PROXIES = conf.proxy  # 代理设置，格式为 {"http": "http://user:pass@proxy:port", "https": "https://user:pass@proxy:port"}
 
 def fetch_data(name, url, mirror_url, proxies, data_dir):
     """

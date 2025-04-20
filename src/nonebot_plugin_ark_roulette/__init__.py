@@ -1,7 +1,7 @@
 import os
 import json
 import asyncio
-from nonebot.plugin import PluginMetadata
+from nonebot.plugin import PluginMetadata, get_plugin_config
 from nonebot import on_command, logger
 from nonebot.exception import FinishedException
 from nonebot.adapters.onebot.v11 import MessageEvent, Message
@@ -23,8 +23,9 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters={"~onebot.v11"},
 )
 
-confi = Config()
-DATA_DIR = confi.data_dir
+conf = get_plugin_config(Config)
+
+DATA_DIR = conf.data_dir  # 数据存储目录
 skin_table_path = os.path.join(DATA_DIR, "skin_table.json")
 character_table_path = os.path.join(DATA_DIR, "character_table.json")
 handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
