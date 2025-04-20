@@ -58,11 +58,14 @@ def load_handbook_data(data_path):
     # 遍历每个角色的故事数据
     for char_id, stories in handbook_stories.items():
         # 提取关键信息
-        for key in formatted_data.keys():
+        for key in mappings.keys():
             info = retrieve_info(handbook_stories, char_id, "基础档案", key)
             if info:
                 # 使用映射表映射关键词
                 mapped_key = mappings.get(key, key)  # 使用映射表映射关键词
+                # 确保 mapped_key 存在于 formatted_data 中
+                if mapped_key not in formatted_data:
+                    formatted_data[mapped_key] = {}
                 formatted_data[mapped_key][char_id] = info
 
     return formatted_data
