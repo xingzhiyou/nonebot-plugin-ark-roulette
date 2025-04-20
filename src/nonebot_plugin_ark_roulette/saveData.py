@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .handbook import load_handbook, retrieve_info
 from .skin import load_skin_data
-from .mapping import load_mappings
+from .mapping import load_team_sub_mapping
 from .config import Config
 
 confi = Config()  # 实例化配置类
@@ -14,7 +14,7 @@ character_table_path = os.path.join(DATA_DIR, "character_table.json")
 handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
 skin_table_path = os.path.join(DATA_DIR, "skin_table.json")
 
-mappings = load_mappings(
+mappings = load_team_sub_mapping(
     os.path.join(DATA_DIR, "uniequip_table.json"),
     os.path.join(DATA_DIR, "handbook_team_table.json"),
 )

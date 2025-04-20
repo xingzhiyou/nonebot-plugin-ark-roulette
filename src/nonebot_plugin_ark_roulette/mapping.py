@@ -89,12 +89,6 @@ BASIC_ARCHIVES = {
 
 
 RARITY_MAPPING = {
-    "1": "TIER_1",
-    "2": "TIER_2",
-    "3": "TIER_3",
-    "4": "TIER_4",
-    "5": "TIER_5",
-    "6": "TIER_6",
     "1星": "TIER_1",
     "2星": "TIER_2",
     "3星": "TIER_3",
@@ -143,6 +137,23 @@ def load_handbook_team_table(handbook_team_table_path):
         team_name = value.get("powerName", key)
         mapping[key] = team_name  # 正向映射
         mapping[team_name] = key  # 反向映射
+
+    return mapping
+
+
+def load_team_sub_mapping(uniequip_table_path, handbook_team_table_path):
+    """
+    加载子职业和国家、地区、组织数据建立双向映射表。
+    """
+    sub_profession_mapping = load_sub_profession_mapping(uniequip_table_path) or {}
+    team_nation_mapping = load_handbook_team_table(handbook_team_table_path) or {}
+
+    mapping = {
+        **sub_profession_mapping,
+        **team_nation_mapping,
+        **BASIC_ARCHIVES,
+        **FIELD_MAPPING
+    }
 
     return mapping
 

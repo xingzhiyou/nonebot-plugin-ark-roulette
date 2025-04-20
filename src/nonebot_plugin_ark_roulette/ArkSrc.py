@@ -1,12 +1,10 @@
 import os
 import requests
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from .config import Config
 
-
 confi = Config()  # 实例化配置类
-
-
 
 # 定义目标 URL 和保存路径
 URLS = {
@@ -31,49 +29,59 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
 # 定义代理
 PROXIES = confi.proxy  # 从配置中获取代理设置
 
-def fetch_and_save_data(DATA_DIR):
-    # 确保 data 目录存在
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
-    
-    results = []  # 用于存储每个文件的处理结果
-    for name, url in URLS.items():
-        file_path = os.path.join(DATA_DIR, f"{name}.json")
-        try:
-            # 从主站获取数据
-            response = requests.get(url, proxies=PROXIES)
-            response.raise_for_status()  # 检查请求是否成功
+def fetch_data(name, url, mirror_url, proxies, data_dir):
+    """
+    下载数据并保存到文件。
+    """
+    file_path = os.path.join(data_dir, f"{name}.json")
+    try:
+        # 从主站获取数据
+        response = requests.get(url, proxies=proxies)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException:
+        # 如果主站失败，尝试从镜像站获取
+        if mirror_url:
+            response = requests.get(mirror_url, proxies=proxies)
+            response.raise_for_status()
             data = response.json()
-        except requests.RequestException as e:
-            # 如果主站失败，尝试从镜像站获取
+        else:
+            raise Exception(f"镜像站未定义 {name} 的 URL")
+
+    # 将数据保存到文件
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+    return f"{name} 数据已成功保存到 {file_path}"
+
+def fetch_and_save_data_multithreaded(data_dir):
+    """
+    使用多线程下载和保存数据。
+    """
+    # 确保 data 目录存在
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    results = []  # 用于存储每个文件的处理结果
+    with ThreadPoolExecutor() as executor:
+        future_to_name = {
+            executor.submit(fetch_data, name, url, MIRROR_URLS.get(name), PROXIES, data_dir): name
+            for name, url in URLS.items()
+        }
+
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
             try:
-                mirror_url = MIRROR_URLS.get(name)
-                if mirror_url:
-                    response = requests.get(mirror_url, proxies=PROXIES)
-                    response.raise_for_status()
-                    data = response.json()
-                    results.append(f"从镜像站成功获取 {name} 数据")
-                else:
-                    raise Exception(f"镜像站未定义 {name} 的 URL")
-            except Exception as mirror_e:
-                results.append(f"请求 {name} 数据失败（主站和镜像站均失败）：{e}, {mirror_e}")
-                continue
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                results.append(f"{name} 数据下载失败：{e}")
 
-        try:
-            # 将数据保存到文件
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-            
-            results.append(f"{name} 数据已成功保存到 {file_path}")
-        except Exception as e:
-            results.append(f"保存 {name} 数据时发生错误：{e}")
-    
-    return results  # 返回所有结果
-
+    return results
 
 # 示例用法
 if __name__ == "__main__":
-    results = fetch_and_save_data(DATA_DIR)
+    results = fetch_and_save_data_multithreaded(DATA_DIR)
     for result in results:
         print(result)
     print("数据更新完成！")
