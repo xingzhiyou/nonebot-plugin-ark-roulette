@@ -80,20 +80,34 @@ async def handle_update_data(bot: Bot, event: MessageEvent):
     处理更新数据命令。
     """
     try:
+        logger.info("开始更新干员数据...")
         await update_data.send("正在更新干员数据，请稍等...")
+
+        # 下载并保存数据
+        logger.info("正在下载并保存干员数据...")
         fetch_and_save_data(DATA_DIR)
+
         # 加载数据文件
+        logger.info("正在加载干员数据文件...")
         character_data = load_character_data(character_table_path)
         handbook_data = load_handbook_data(handbook_info_table_path)
         skin_data = load_skin_data(skin_table_path)
+
+        # 合并数据
+        logger.info("正在合并干员数据...")
         merged_data = merge_data(character_data, handbook_data, skin_data)
+
+        # 保存合并后的数据
+        logger.info("正在保存合并后的干员数据...")
         save_to_json(merged_data, os.path.join(DATA_DIR, "merged_character_data.json"))
+
+        logger.info("干员数据更新完成！")
         await update_data.send("干员数据更新完成！")
     except FinishedException:
+        logger.warning("更新数据命令被中断。")
         pass
     except Exception as e:
-        logger.exception(e)
-        # logger.error(f"更新数据时发生错误：{e}")
+        logger.exception("更新数据时发生错误：")
         await update_data.send("更新数据失败，请检查日志。")
 
 
@@ -107,6 +121,13 @@ async def handle_find_operator(event: MessageEvent, args: Message = CommandArg()
     history_key = f"find_operator_history_{user_id}"
 
     logger.info(f"用户 {user_id} 开始筛选操作，输入参数: {args.extract_plain_text().strip()}")
+
+    # 检查资源文件是否存在
+    if not os.path.exists(merged_character_data_path):
+        logger.warning(f"资源文件 {merged_character_data_path} 不存在，提醒用户更新数据。")
+        await find_operator.finish(
+            "资源文件不存在，请使用 /更新数据 命令获取最新的干员数据后再尝试。"
+        )
 
     # 初始化或获取用户的当前数据和历史记录
     if session_key not in find_operator_sessions:
