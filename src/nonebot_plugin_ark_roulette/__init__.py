@@ -80,12 +80,31 @@ def reset_session_timeout(user_id: str):
 @update_data.handle()
 async def handle_update_data(bot: Bot, event: MessageEvent):
     """
-    处理更新数据命令。
+    处理更新数据命令，异步执行资源更新。
     """
     try:
         logger.info("开始更新干员数据...")
         await update_data.send("正在更新干员数据，请稍等...")
 
+        # 异步执行资源更新
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, update_resources)
+
+        logger.info("干员数据更新完成！")
+        await update_data.send("干员数据更新完成！")
+    except FinishedException:
+        logger.warning("更新数据命令被中断。")
+        pass
+    except Exception as e:
+        logger.exception("更新数据时发生错误：")
+        await update_data.send("更新数据失败，请检查日志。")
+
+
+def update_resources():
+    """
+    同步执行资源更新的逻辑。
+    """
+    try:
         # 下载并保存数据
         logger.info("正在下载并保存干员数据...")
         fetch_and_save_data(DATA_DIR)
@@ -103,15 +122,9 @@ async def handle_update_data(bot: Bot, event: MessageEvent):
         # 保存合并后的数据
         logger.info("正在保存合并后的干员数据...")
         save_to_json(merged_data, os.path.join(DATA_DIR, "merged_character_data.json"))
-
-        logger.info("干员数据更新完成！")
-        await update_data.send("干员数据更新完成！")
-    except FinishedException:
-        logger.warning("更新数据命令被中断。")
-        pass
     except Exception as e:
-        logger.exception("更新数据时发生错误：")
-        await update_data.send("更新数据失败，请检查日志。")
+        logger.exception("更新资源时发生错误：")
+        raise e
 
 
 @find_operator.handle()

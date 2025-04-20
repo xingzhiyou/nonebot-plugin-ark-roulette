@@ -1,12 +1,15 @@
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from .handbook import load_handbook, retrieve_info
 from .skin import load_skin_data
-
 from .mapping import load_mappings
+from .config import Config
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
+confi = Config()  # 实例化配置类
+
+DATA_DIR = confi.data_dir  # 从配置中获取数据目录
 character_table_path = os.path.join(DATA_DIR, "character_table.json")
 handbook_info_table_path = os.path.join(DATA_DIR, "handbook_info_table.json")
 skin_table_path = os.path.join(DATA_DIR, "skin_table.json")
@@ -65,7 +68,6 @@ def load_handbook_data(data_path):
     return formatted_data
 
 
-
 def merge_data(character_data, handbook_data, skin_data):
     """
     合并角色数据、角色档案和皮肤数据。
@@ -98,7 +100,6 @@ def merge_data(character_data, handbook_data, skin_data):
     return merged_data
 
 
-
 def save_to_json(data, output_path):
     """
     将数据保存到 JSON 文件中。
@@ -106,16 +107,32 @@ def save_to_json(data, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# 示例调用
-if __name__ == "__main__":
-    # 加载数据文件
-    character_data = load_character_data(character_table_path)
-    handbook_data = load_handbook_data(handbook_info_table_path)
-    skin_data = load_skin_data(skin_table_path)
+
+def process_data():
+    """
+    使用多线程加载和处理数据。
+    """
+    with ThreadPoolExecutor() as executor:
+        # 提交任务到线程池
+        future_character = executor.submit(load_character_data, character_table_path)
+        future_handbook = executor.submit(load_handbook_data, handbook_info_table_path)
+        future_skin = executor.submit(load_skin_data, skin_table_path)
+
+        # 获取结果
+        character_data = future_character.result()
+        handbook_data = future_handbook.result()
+        skin_data = future_skin.result()
 
     # 合并数据
     merged_data = merge_data(character_data, handbook_data, skin_data)
-    
+    return merged_data
+
+
+# 示例调用
+if __name__ == "__main__":
+    # 使用多线程处理数据
+    merged_data = process_data()
+
     # 保存合并后的数据到 JSON 文件
     save_to_json(merged_data, os.path.join(DATA_DIR, "merged_character_data.json"))
     print("数据合并完成，已保存到 merged_character_data.json 文件中。")
