@@ -13,6 +13,7 @@ from .ArkSrc import fetch_and_save_data
 from .mapping import FIELD_MAPPING, load_mappings
 from .saveData import load_character_data, load_handbook_data, load_skin_data, merge_data, save_to_json
 from .utils import map_tables, search_raw_data
+from .config import Config
 
 __plugin_meta__ = PluginMetadata(
     name="明日方舟干员插件",
@@ -20,12 +21,14 @@ __plugin_meta__ = PluginMetadata(
     usage="使用 /筛选 或 /随机选择 命令来获取干员信息。",
     type="application",
     homepage="https://github.com/xingzhiyou/nonebot-plugin-ark-roulette",
-    config=None,  # 插件配置类
+    config=Config,  # 插件配置类
     supported_adapters={"~onebot.v11"},  # 支持的适配器
 )
 
+confi = Config()  # 实例化配置类
+
 # 定义数据目录和文件路径
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
+DATA_DIR = confi.data_dir  # 从配置中获取数据目录
 skin_table_path = os.path.join(DATA_DIR, "skin_table.json")
 character_table_path = os.path.join(DATA_DIR, "character_table.json")
 uniequip_table_path = os.path.join(DATA_DIR, "uniequip_table.json")

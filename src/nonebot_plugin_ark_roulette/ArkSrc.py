@@ -1,6 +1,11 @@
 import os
 import requests
 import json
+from .config import Config
+
+
+confi = Config()  # 实例化配置类
+
 
 
 # 定义目标 URL 和保存路径
@@ -23,6 +28,9 @@ MIRROR_URLS = {
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data/arkrsc")
 
+# 定义代理
+PROXIES = confi.proxy  # 从配置中获取代理设置
+
 def fetch_and_save_data(DATA_DIR):
     # 确保 data 目录存在
     if not os.path.exists(DATA_DIR):
@@ -33,7 +41,7 @@ def fetch_and_save_data(DATA_DIR):
         file_path = os.path.join(DATA_DIR, f"{name}.json")
         try:
             # 从主站获取数据
-            response = requests.get(url)
+            response = requests.get(url, proxies=PROXIES)
             response.raise_for_status()  # 检查请求是否成功
             data = response.json()
         except requests.RequestException as e:
@@ -41,7 +49,7 @@ def fetch_and_save_data(DATA_DIR):
             try:
                 mirror_url = MIRROR_URLS.get(name)
                 if mirror_url:
-                    response = requests.get(mirror_url)
+                    response = requests.get(mirror_url, proxies=PROXIES)
                     response.raise_for_status()
                     data = response.json()
                     results.append(f"从镜像站成功获取 {name} 数据")
