@@ -61,7 +61,7 @@ async def handle_update_data():
     try:
         logger.info("开始更新干员数据...")
         await update_data.send("正在更新干员数据，请稍等...")
-        fetch_and_save_data_multithreaded(DATA_DIR)
+        await fetch_and_save_data_multithreaded(DATA_DIR)
         merged_data = merge_data(
             load_character_data(character_table_path),
             load_handbook_data(handbook_info_table_path),
