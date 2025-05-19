@@ -1,5 +1,17 @@
 import json
-from pathlib import Path
+from collections.abc import Hashable, Mapping
+from typing import TypeVar
+
+from nonebot import require
+
+_ = require("nonebot_plugin_localstore")
+
+from nonebot_plugin_localstore import get_plugin_data_dir
+
+DATA_DIR = get_plugin_data_dir()
+
+from .schemas import HandbookTeam, UniEquipTable
+from .utils import require_json
 
 FIELD_MAPPING = {
     "name": "姓名",
@@ -103,18 +115,15 @@ RARITY_MAPPING = {
     "六星": "TIER_6",
 }
 
-def load_sub_profession_mapping(uniequip_table_path):
+
+@require_json(DATA_DIR / "uniequip_table.json")
+def load_sub_profession_mapping(uniequip_data: UniEquipTable):
     """
     加载子职业数据建立双向映射表。
     """
-    if not Path(uniequip_table_path).exists():
-        return
-
-    with open(uniequip_table_path, "r", encoding="utf-8") as f:
-        uniequip_data = json.load(f)
 
     sub_prof_dict = uniequip_data.get("subProfDict", {})
-    mapping = {}
+    mapping: dict[str, str] = {}
     for key, value in sub_prof_dict.items():
         sub_profession_name = value.get("subProfessionName", key)
         mapping[key] = sub_profession_name  # 正向映射
@@ -122,17 +131,14 @@ def load_sub_profession_mapping(uniequip_table_path):
 
     return mapping
 
-def load_handbook_team_table(handbook_team_table_path):
+
+@require_json(DATA_DIR / "handbook_team_table.json")
+def load_handbook_team_table(handbook_team_data: dict[str, HandbookTeam]):
     """
     加载国家、地区、组织数据建立双向映射表。
     """
-    if not Path(handbook_team_table_path).exists():
-        return
 
-    with open(handbook_team_table_path, "r", encoding="utf-8") as f:
-        handbook_team_data = json.load(f)
-
-    mapping = {}
+    mapping: dict[str, str] = {}
     for key, value in handbook_team_data.items():
         team_name = value.get("powerName", key)
         mapping[key] = team_name  # 正向映射
@@ -141,28 +147,24 @@ def load_handbook_team_table(handbook_team_table_path):
     return mapping
 
 
-def load_team_sub_mapping(uniequip_table_path, handbook_team_table_path):
+def load_team_sub_mapping():
     """
     加载子职业和国家、地区、组织数据建立双向映射表。
     """
-    sub_profession_mapping = load_sub_profession_mapping(uniequip_table_path) or {}
-    team_nation_mapping = load_handbook_team_table(handbook_team_table_path) or {}
+    sub_profession_mapping = load_sub_profession_mapping() or {}
+    team_nation_mapping = load_handbook_team_table() or {}
 
-    mapping = {
-        **sub_profession_mapping,
-        **team_nation_mapping,
-        **BASIC_ARCHIVES,
-        **FIELD_MAPPING
-    }
+    mapping = {**sub_profession_mapping, **team_nation_mapping, **BASIC_ARCHIVES, **FIELD_MAPPING}
 
     return mapping
 
-def load_mappings(uniequip_table_path, handbook_team_table_path):
+
+def load_mappings():
     """
     加载所有映射表并合并为一个大表。
     """
-    sub_profession_mapping = load_sub_profession_mapping(uniequip_table_path) or {}
-    team_nation_mapping = load_handbook_team_table(handbook_team_table_path) or {}
+    sub_profession_mapping = load_sub_profession_mapping() or {}
+    team_nation_mapping = load_handbook_team_table() or {}
 
     # 合并所有映射表
     combined_mapping = {
@@ -176,3 +178,68 @@ def load_mappings(uniequip_table_path, handbook_team_table_path):
     }
 
     return combined_mapping
+
+
+def map_tables(value: str):
+    """
+    根据键查询映射表并返回对应的值，支持关键词匹配。
+    """
+    # 加载映射表
+    mappings = load_mappings()
+
+    # 精确匹配
+    if value in mappings:
+        return mappings[value]
+
+    # 关键词匹配
+    for key, mapped_value in mappings.items():
+        if key in value or value in key:
+            return mapped_value
+
+    # 如果没有找到匹配的值，则返回原始值
+    return value
+
+
+KT = TypeVar("KT", bound=Hashable)
+VT = TypeVar("VT")
+
+
+def search_raw_data(data: Mapping[KT, VT], keyword: str) -> list[Mapping[KT, VT]]:
+    """
+    在数据中搜索包含关键词的条目。
+    """
+    results: list[Mapping[KT, VT]] = []
+    for key, value in data.items():
+        if keyword.lower() in json.dumps(value, ensure_ascii=False).lower():
+            results.append({key: value})
+    return results
+
+
+if __name__ == "__main__":
+    # 循环运行输入关键词
+    with open(DATA_DIR / "merged_character_data.json", encoding="utf-8") as f:
+        uniequip_data = json.load(f)
+
+    current_data = uniequip_data  # 初始化当前数据为完整数据集
+
+    while True:
+        keyword = input("请输入关键词（输入'q'退出，输入'r'重置搜索）：")
+        if keyword.lower() == "q":
+            print("退出程序。")  # noqa: T201  # print in standalone mode
+            break
+        elif keyword.lower() == "r":
+            current_data = uniequip_data  # 重置当前数据为完整数据集
+            print("搜索结果已重置为完整数据集。")  # noqa: T201
+            continue
+
+        keyword = map_tables(keyword)  # 使用映射表转换关键词
+        results = search_raw_data(current_data, keyword)
+        if results:
+            print(f"找到 {len(results)} 个包含关键词 '{keyword}' 的条目：")  # noqa: T201
+            for result in results:
+                for key, value in result.items():
+                    print(f"{key}: {value.get('name', 'N/A')}")  # noqa: T201
+            # 更新当前数据为本次搜索结果
+            current_data = {key: value for result in results for key, value in result.items()}
+        else:
+            print(f"没有找到包含关键词 '{keyword}' 的条目。")  # noqa: T201
