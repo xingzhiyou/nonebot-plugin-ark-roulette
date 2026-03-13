@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 
 import httpx
 from nonebot import get_plugin_config, require
@@ -45,6 +46,15 @@ async def fetch_data(
     """
     异步下载数据。
     """
+    # 验证名称参数，防止目录遍历攻击
+    if not name or any(char in name for char in '\\/:*?"<>|'):
+        raise ValueError("Invalid file name")
+    
+    # 确保文件名安全，仅使用基本字符
+    safe_name = ''.join(c for c in name if c.isalnum() or c in '_-')
+    if not safe_name:
+        raise ValueError("Invalid file name")
+    
     async with httpx.AsyncClient(proxy=proxy) as client:
         try:
             # 从主站获取数据
@@ -58,7 +68,13 @@ async def fetch_data(
             else:
                 raise Exception(f"镜像站未定义 {name} 的 URL")
 
-    _ = (DATA_DIR / f"{name}.json").write_text(json.dumps(result), "utf-8")
+    # 安全构建文件路径，确保在DATA_DIR目录内
+    file_path = DATA_DIR / f"{safe_name}.json"
+    # 验证路径是否在DATA_DIR内，防止目录遍历
+    if not str(file_path).startswith(str(DATA_DIR)):
+        raise ValueError("Invalid file path")
+    
+    _ = file_path.write_text(json.dumps(result), "utf-8")
 
     return result
 
