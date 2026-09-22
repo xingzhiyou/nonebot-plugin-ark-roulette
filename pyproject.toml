@@ -16,10 +16,13 @@ python = ">=3.11,<4.0"
 nonebot2 = "^2.3.0"  # 更新 NoneBot2 版本
 httpx = "^0.28"
 nonebot-plugin-localstore = "^0.7.4"
+python-dotenv = ">=1.2.2"
+idna = ">=3.15"
+anyio = ">=4.14.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.0"
-black = "~26.3.1"
+pytest = ">=9.0.3"
+black = ">=26.3.1"
 isort = "^5.10.1"
 basedpyright = "^1.29.1"
 ruff = "^0.11.10"
